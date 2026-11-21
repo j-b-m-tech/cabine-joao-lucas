@@ -56,7 +56,7 @@
 
 <section id="inicio" class="tela ativa">
   <img src="moldura.webp" alt="Moldura da festa do João Lucas">
-  <p>Ganhe sua coroa de estrelas e tire sua foto da festa! ⭐</p>
+  <p>Ganhe seu bloco mágico e tire sua foto da festa! ⭐</p>
   <button id="btnIniciar">📸 Abrir câmera</button>
   <div class="erro" id="erro"></div>
 </section>
@@ -131,27 +131,46 @@ function formaEstrela(rExt, rInt){
   f.closePath(); return f;
 }
 
+function desenharFace(cor, borda, c){
+  c = c || document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = borda; g.fillRect(0, 0, 256, 256);
+  g.fillStyle = cor; g.beginPath();
+  if (g.roundRect) g.roundRect(14, 14, 228, 228, 30); else g.rect(14, 14, 228, 228);
+  g.fill();
+  g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(14, 14, 228, 60);           // brilho
+  g.fillStyle = '#fff59d';
+  for (const [x, y] of [[44, 44], [212, 44], [44, 212], [212, 212]]){
+    g.save(); g.translate(x, y); g.beginPath();
+    for (let i = 0; i < 10; i++){ const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 7 : 16; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+    g.closePath(); g.fill(); g.restore();
+  }
+  g.translate(256, 0); g.scale(-1, 1);   // a selfie é espelhada: desenha invertido para ler certo
+  g.font = '700 180px Fredoka, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 14; g.strokeStyle = borda; g.strokeText('5', 128, 140);
+  g.fillStyle = '#fff'; g.fillText('5', 128, 140);
+  return c;
+}
+
 function montarCena(spec){
   const three = JeelizThreeHelper.init(spec, () => {});
   EFEITO = new THREE.Object3D();
   EFEITO.scale.setScalar(TAMANHO_EFEITO);
 
-  // Coroa: 7 estrelas douradas girando em volta da cabeça
+  // Bloco de brinquedo com o número 5, flutuando e girando sobre a cabeça
   COROA = new THREE.Object3D();
-  COROA.position.set(0, 0.62, -0.05);
-  const geoEstrela = new THREE.ExtrudeGeometry(formaEstrela(0.1, 0.043),
-    { depth: 0.05, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.02, bevelSegments: 3 });
-  geoEstrela.center();
-  const cores = [0xffd31a, 0xffd31a, 0xff4fa3, 0xffd31a, 0x4fc3ff, 0xffd31a, 0x7cff6b];
-  for (let i = 0; i < 7; i++){
-    const mat = new THREE.MeshPhongMaterial({ color: cores[i], emissive: cores[i], emissiveIntensity: 0.25, shininess: 90, specular: 0xffffff });
-    const e = new THREE.Mesh(geoEstrela, mat);
-    const a = i / 7 * Math.PI * 2;
-    e.userData.a = a;
-    e.frustumCulled = false;
-    COROA.add(e);
-  }
+  COROA.position.set(0, 0.64, -0.05);
+  const facesCor = [['#e53935','#b71c1c'], ['#1e88e5','#0d47a1'], ['#43a047','#1b5e20'], ['#fb8c00','#e65100'], ['#8e24aa','#4a148c'], ['#e53935','#b71c1c']];
+  const telas = facesCor.map(([cor, borda]) => desenharFace(cor, borda));
+  const texturas = telas.map(c => { const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t; });
+  const mats = texturas.map(t => new THREE.MeshPhongMaterial({ map: t, shininess: 60, specular: 0x666666 }));
+  const bloco = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.36, 0.36), mats);
+  bloco.frustumCulled = false;
+  COROA.add(bloco);
   EFEITO.add(COROA);
+  document.fonts && document.fonts.load('700 200px Fredoka').then(() => {
+    facesCor.forEach(([cor, borda], i) => { desenharFace(cor, borda, telas[i]); texturas[i].needsUpdate = true; });
+  }).catch(() => {});
 
   // Moedas que saem da boca
   MOEDAS = new THREE.Object3D();
@@ -189,12 +208,9 @@ function aCadaQuadro(ds){
   const agora = performance.now() / 1000, dt = Math.min(0.05, ultimoT ? agora - ultimoT : 0.016); ultimoT = agora;
   if (carregado){
     EFEITO.visible = filtroLigado;
-    // coroa gira devagar, cada estrela balança e brilha
-    COROA.children.forEach((e, i) => {
-      const a = e.userData.a + agora * 0.8;
-      e.position.set(Math.cos(a) * 0.45, Math.sin(agora * 3 + i) * 0.03, Math.sin(a) * 0.3);
-      e.rotation.set(0, agora * 2.5 + i, Math.sin(agora * 2 + i) * 0.2);
-    });
+    // bloco flutua e gira devagar
+    COROA.position.y = 0.64 + Math.sin(agora * 1.6) * 0.04;
+    COROA.rotation.set(0.25 + Math.sin(agora * 0.7) * 0.08, agora * 0.6, Math.sin(agora * 0.9) * 0.06);
     // boca aberta = chuva de moedas
     if (JeelizThreeHelper.get_isDetected() && filtroLigado && ds.expressions[0] >= BOCA_ABERTA && agora - ultimaMoeda > 0.11 && moedas.length < 40){
       ultimaMoeda = agora; soltarMoeda();
