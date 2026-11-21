@@ -166,12 +166,12 @@ function montarCena(spec){
 
   // Bloco de brinquedo com o número 5, flutuando e girando sobre a cabeça
   COROA = new THREE.Object3D();
-  COROA.position.set(0, 0.98, -0.05);
+  COROA.position.set(0, 1.4, -0.05);
   const facesCor = [['#e53935','#b71c1c'], ['#1e88e5','#0d47a1'], ['#43a047','#1b5e20'], ['#fb8c00','#e65100'], ['#8e24aa','#4a148c'], ['#e53935','#b71c1c']];
   const telas = facesCor.map(([cor, borda]) => desenharFace(cor, borda));
   const texturas = telas.map(c => { const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t; });
   const mats = texturas.map(t => new THREE.MeshPhongMaterial({ map: t, shininess: 60, specular: 0x666666 }));
-  const bloco = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.36, 0.36), mats);
+  const bloco = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, 0.55), mats);
   bloco.frustumCulled = false;
   COROA.add(bloco);
   EFEITO.add(COROA);
@@ -216,7 +216,7 @@ function aCadaQuadro(ds){
   if (carregado){
     EFEITO.visible = filtroLigado;
     // bloco flutua e gira devagar
-    COROA.position.y = 0.98 + Math.sin(agora * 1.6) * 0.04;
+    COROA.position.y = 1.4 + Math.sin(agora * 1.6) * 0.04;
     COROA.rotation.set(0.25 + Math.sin(agora * 0.7) * 0.08, agora * 0.6, Math.sin(agora * 0.9) * 0.06);
     // boca aberta = chuva de moedas
     if (JeelizThreeHelper.get_isDetected() && filtroLigado && ds.expressions[0] >= BOCA_ABERTA && agora - ultimaMoeda > 0.11 && moedas.length < 40){
