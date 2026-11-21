@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a237e">
+<title>Cabine do João Lucas ⭐ 5 anos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+<link rel="preload" href="moldura.webp" as="image">
+<style>
+  :root { --azul:#283593; --azul2:#1a237e; --vermelho:#e53935; --amarelo:#ffca28; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--azul2); color:#fff;
+    font-family:'Fredoka',system-ui,sans-serif; overflow:hidden; }
+  .tela { position:fixed; inset:0; display:none; flex-direction:column; align-items:center;
+    justify-content:center; padding:calc(env(safe-area-inset-top) + 10px) 12px calc(env(safe-area-inset-bottom) + 12px); }
+  .tela.ativa { display:flex; }
+  #inicio { background:radial-gradient(circle at 50% 30%, #1e88e5, var(--azul2)); text-align:center; gap:16px; }
+  #inicio img { max-height:46vh; max-width:70vw; filter:drop-shadow(0 8px 18px rgba(0,0,0,.4)); }
+  #inicio p { margin:0; font-size:19px; max-width:340px; }
+  button { font-family:inherit; font-weight:700; border:0; border-radius:999px; cursor:pointer;
+    font-size:22px; padding:16px 30px; color:#fff; background:var(--vermelho);
+    box-shadow:0 6px 0 #b71c1c; transition:transform .08s; }
+  button:active { transform:translateY(4px); box-shadow:0 2px 0 #b71c1c; }
+  button.sec { background:#fff; color:var(--azul2); box-shadow:0 6px 0 #90a4ae; }
+  button[disabled] { opacity:.6; }
+  .erro { background:#fff; color:#b71c1c; border-radius:16px; padding:12px 16px; font-size:16px; max-width:360px; display:none; }
+
+  #camera { background:#000; gap:12px; justify-content:space-between; }
+  #palco { position:relative; overflow:hidden; border-radius:10px; background:#000; flex:none; }
+  #jeeFaceFilterCanvas { position:absolute; inset:0; width:100%; height:100%; transform:scaleX(-1); }
+  #molduraTela { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  #contagem { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:150px; font-weight:700; color:#fff; text-shadow:0 6px 0 var(--vermelho), 0 0 30px rgba(0,0,0,.5);
+    pointer-events:none; }
+  #flash { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; transition:opacity .35s; }
+  #aviso { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    background:rgba(0,0,0,.6); padding:10px 18px; border-radius:999px; font-size:17px; white-space:nowrap; }
+  #controles { display:flex; justify-content:center; align-items:center; gap:28px; flex:none; }
+  #disparo { width:78px; height:78px; padding:0; border-radius:50%; background:#fff;
+    border:6px solid var(--vermelho); box-shadow:0 0 0 4px #fff, 0 6px 16px rgba(0,0,0,.4); font-size:32px; }
+  #disparo:active { transform:scale(.92); }
+  .mini { width:54px; height:54px; padding:0; border-radius:50%; font-size:24px;
+    background:rgba(255,255,255,.92); color:var(--azul2); box-shadow:0 4px 10px rgba(0,0,0,.35); }
+
+  #resultado { background:radial-gradient(circle at 50% 20%, #1e88e5, var(--azul2)); gap:14px; }
+  #foto { max-width:100%; max-height:calc(100% - 150px); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.45);
+    -webkit-touch-callout:default; }
+  #botoes { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  #dica { font-size:14px; opacity:.85; text-align:center; max-width:340px; margin:0; }
+</style>
+</head>
+<body>
+
+<section id="inicio" class="tela ativa">
+  <img src="moldura.webp" alt="Moldura da festa do João Lucas">
+  <p>Ganhe sua coroa de estrelas e tire sua foto da festa! ⭐</p>
+  <button id="btnIniciar">📸 Abrir câmera</button>
+  <div class="erro" id="erro"></div>
+</section>
+
+<section id="camera" class="tela">
+  <div id="palco">
+    <canvas id="jeeFaceFilterCanvas"></canvas>
+    <img id="molduraTela" src="moldura.webp" alt="">
+    <div id="contagem"></div>
+    <div id="flash"></div>
+    <div id="aviso">Preparando o efeito… ⭐</div>
+  </div>
+  <div id="controles">
+    <button class="mini" id="btnFiltro" title="Liga/desliga o efeito">⭐</button>
+    <button id="disparo" aria-label="Tirar foto">📷</button>
+    <span class="mini" style="visibility:hidden"></span>
+  </div>
+</section>
+
+<section id="resultado" class="tela">
+  <img id="foto" alt="Sua foto da festa">
+  <div id="botoes">
+    <button id="btnSalvar">💾 Salvar foto</button>
+    <button class="sec" id="btnDeNovo">🔁 Outra</button>
+  </div>
+  <p id="dica"></p>
+</section>
+
+<!-- Rastreamento facial: Jeeliz FaceFilter (Apache 2.0). Efeito 3D original. -->
+<script src="libs/jeelizFaceFilter.js"></script>
+<script src="libs/three.min.js"></script>
+<script src="libs/JeelizResizer.js"></script>
+<script src="libs/JeelizThreeHelper.js"></script>
+<script src="libs/Tween.min.js"></script>
+<script>
+// ================= PERSONALIZE AQUI =================
+const NOME = 'João Lucas';
+const ARQUIVO = 'festa-joao-lucas';
+const MOLDURA = 'moldura.webp';      // arte da moldura (centro transparente)
+const W = 1000, H = 1818;            // tamanho da foto final (mesma proporção da arte)
+const TAMANHO_EFEITO = 1.3;          // 1 = normal; maior = coroa e moedas maiores
+const BOCA_ABERTA = 0.55;            // quanto abrir a boca para as moedas saírem (menor = mais fácil)
+// ====================================================
+
+const $ = id => document.getElementById(id);
+const molduraImg = new Image(); molduraImg.src = MOLDURA;
+let iniciado = false, filtroLigado = true, blobFoto = null;
+
+function mostrar(id){ document.querySelectorAll('.tela').forEach(s => s.classList.toggle('ativa', s.id === id)); }
+
+// encaixa o palco (proporção da moldura) na tela, deixando espaço para os botões
+function ajustarPalco(){
+  const tela = $('camera'), cs = getComputedStyle(tela);
+  const livreW = innerWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const livreH = innerHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 78 - 12;
+  const r = Math.min(livreW / W, livreH / H);
+  $('palco').style.width = Math.floor(W * r) + 'px';
+  $('palco').style.height = Math.floor(H * r) + 'px';
+}
+
+// ---------- Efeito 3D: coroa de estrelas + chuva de moedas ----------
+let EFEITO = null, COROA = null, MOEDAS = null, CAMERA3D = null, carregado = false;
+let geoMoeda = null, matMoeda = null, ultimaMoeda = 0, ultimoT = 0;
+const moedas = [];
+
+function formaEstrela(rExt, rInt){
+  const f = new THREE.Shape();
+  for (let i = 0; i < 10; i++){
+    const a = Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? rInt : rExt;
+    i ? f.lineTo(Math.cos(a) * r, Math.sin(a) * r) : f.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  f.closePath(); return f;
+}
+
+function montarCena(spec){
+  const three = JeelizThreeHelper.init(spec, () => {});
+  EFEITO = new THREE.Object3D();
+  EFEITO.scale.setScalar(TAMANHO_EFEITO);
+
+  // Coroa: 7 estrelas douradas girando em volta da cabeça
+  COROA = new THREE.Object3D();
+  COROA.position.set(0, 0.62, -0.05);
+  const geoEstrela = new THREE.ExtrudeGeometry(formaEstrela(0.1, 0.043),
+    { depth: 0.05, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.02, bevelSegments: 3 });
+  geoEstrela.center();
+  const cores = [0xffd31a, 0xffd31a, 0xff4fa3, 0xffd31a, 0x4fc3ff, 0xffd31a, 0x7cff6b];
+  for (let i = 0; i < 7; i++){
+    const mat = new THREE.MeshPhongMaterial({ color: cores[i], emissive: cores[i], emissiveIntensity: 0.25, shininess: 90, specular: 0xffffff });
+    const e = new THREE.Mesh(geoEstrela, mat);
+    const a = i / 7 * Math.PI * 2;
+    e.userData.a = a;
+    e.frustumCulled = false;
+    COROA.add(e);
+  }
+  EFEITO.add(COROA);
+
+  // Moedas que saem da boca
+  MOEDAS = new THREE.Object3D();
+  geoMoeda = new THREE.CylinderGeometry(0.07, 0.07, 0.02, 28);
+  geoMoeda.rotateX(Math.PI / 2);
+  matMoeda = new THREE.MeshPhongMaterial({ color: 0xffc107, emissive: 0x8a5a00, emissiveIntensity: 0.35, shininess: 120, specular: 0xfff3b0 });
+  EFEITO.add(MOEDAS);
+
+  three.faceObject.add(EFEITO);
+  three.scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const luz = new THREE.DirectionalLight(0xffffff, 0.7); luz.position.set(0.5, 1, 1); three.scene.add(luz);
+  CAMERA3D = JeelizThreeHelper.create_camera();
+  carregado = true;
+  $('aviso').style.display = 'none';
+}
+
+const estrelaMoeda = (() => { // estrelinha em relevo na face da moeda
+  let g = null; return () => g || (g = (() => { const x = new THREE.ExtrudeGeometry(formaEstrela(0.035, 0.016), { depth: 0.01, bevelEnabled: false }); x.center(); return x; })());
+})();
+let matRelevo = null;
+function soltarMoeda(){
+  const m = new THREE.Mesh(geoMoeda, matMoeda);
+  if (!matRelevo) matRelevo = new THREE.MeshPhongMaterial({ color: 0xfff176, emissive: 0x9a7b00, emissiveIntensity: 0.3, shininess: 120 });
+  for (const z of [0.016, -0.016]){ const r = new THREE.Mesh(estrelaMoeda(), matRelevo); r.position.z = z; r.frustumCulled = false; m.add(r); }
+  m.frustumCulled = false;
+  m.position.set(0, -0.42, 0.3);
+  m.userData.v = new THREE.Vector3((Math.random() - 0.5) * 1.6, 1.1 + Math.random() * 0.8, 0.5 + Math.random() * 0.4);
+  m.userData.giro = 6 + Math.random() * 6;
+  m.userData.vida = 0;
+  MOEDAS.add(m); moedas.push(m);
+}
+
+function aCadaQuadro(ds){
+  if (window.__fakeDetect) window.__fakeDetect(ds);   // usado só em testes
+  const agora = performance.now() / 1000, dt = Math.min(0.05, ultimoT ? agora - ultimoT : 0.016); ultimoT = agora;
+  if (carregado){
+    EFEITO.visible = filtroLigado;
+    // coroa gira devagar, cada estrela balança e brilha
+    COROA.children.forEach((e, i) => {
+      const a = e.userData.a + agora * 0.8;
+      e.position.set(Math.cos(a) * 0.45, Math.sin(agora * 3 + i) * 0.03, Math.sin(a) * 0.3);
+      e.rotation.set(0, agora * 2.5 + i, Math.sin(agora * 2 + i) * 0.2);
+    });
+    // boca aberta = chuva de moedas
+    if (JeelizThreeHelper.get_isDetected() && filtroLigado && ds.expressions[0] >= BOCA_ABERTA && agora - ultimaMoeda > 0.11 && moedas.length < 40){
+      ultimaMoeda = agora; soltarMoeda();
+    }
+    for (let i = moedas.length - 1; i >= 0; i--){
+      const m = moedas[i], v = m.userData.v;
+      m.userData.vida += dt; v.y -= 3.2 * dt;
+      m.position.addScaledVector(v, dt);
+      m.rotation.y += m.userData.giro * dt;
+      if (m.userData.vida > 1.6){ MOEDAS.remove(m); moedas.splice(i, 1); }
+    }
+  }
+  JeelizThreeHelper.render(ds, CAMERA3D);
+}
+
+function iniciarFiltro(){
+  const erro = $('erro'); erro.style.display = 'none';
+  $('btnIniciar').disabled = true;
+  mostrar('camera'); ajustarPalco();
+  JeelizResizer.size_canvas({
+    canvasId: 'jeeFaceFilterCanvas',
+    overSamplingFactor: Math.min(window.devicePixelRatio || 1, 2),
+    callback: (isErr, bestVideoSettings) => {
+      JEELIZFACEFILTER.init({
+        canvasId: 'jeeFaceFilterCanvas',
+        NNCPath: 'neuralNets/',
+        videoSettings: bestVideoSettings,
+        callbackReady: (errCode, spec) => {
+          $('btnIniciar').disabled = false;
+          if (errCode){
+            console.error(errCode);
+            mostrar('inicio');
+            erro.textContent = errCode === 'WEBCAM_UNAVAILABLE'
+              ? 'Não conseguimos abrir a câmera. Toque em “Permitir” quando o celular perguntar e tente de novo.'
+              : 'Seu celular não conseguiu abrir o filtro (' + errCode + '). Tente pelo Chrome (Android) ou Safari (iPhone).';
+            erro.style.display = 'block';
+            return;
+          }
+          iniciado = true;
+          montarCena(spec);
+        },
+        callbackTrack: aCadaQuadro
+      });
+    }
+  });
+}
+addEventListener('resize', () => { if ($('camera').classList.contains('ativa')){ ajustarPalco(); if (iniciado) JEELIZFACEFILTER.resize(); } });
+
+// ---------- Foto ----------
+const espera = ms => new Promise(r => setTimeout(r, ms));
+async function tirarFoto(){
+  const btn = $('disparo'); if (btn.disabled || !iniciado) return; btn.disabled = true;
+  const cont = $('contagem');
+  for (const n of [3, 2, 1]){ cont.textContent = n; await espera(800); }
+  cont.textContent = '';
+  const flash = $('flash'); flash.style.transition = 'none'; flash.style.opacity = 1;
+  requestAnimationFrame(() => { flash.style.transition = 'opacity .35s'; flash.style.opacity = 0; });
+
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  g.save(); g.translate(W, 0); g.scale(-1, 1);                 // espelha como a tela (selfie)
+  g.drawImage($('jeeFaceFilterCanvas'), 0, 0, W, H);
+  g.restore();
+  if (molduraImg.complete && molduraImg.naturalWidth) g.drawImage(molduraImg, 0, 0, W, H);
+  blobFoto = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+
+  const foto = $('foto');
+  if (foto.src.startsWith('blob:')) URL.revokeObjectURL(foto.src);
+  foto.src = URL.createObjectURL(blobFoto);
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  $('dica').textContent = ios
+    ? 'No iPhone: toque em “Salvar foto” e escolha “Salvar Imagem”. Ou segure o dedo na foto.'
+    : 'Toque em “Salvar foto” para guardar na galeria ou mandar no WhatsApp/Instagram.';
+  btn.disabled = false;
+  mostrar('resultado');
+}
+async function salvarFoto(){
+  if (!blobFoto) return;
+  const nome = `${ARQUIVO}-${Date.now()}.jpg`;
+  const arquivo = new File([blobFoto], nome, { type: 'image/jpeg' });
+  if (navigator.canShare?.({ files: [arquivo] })){
+    try { await navigator.share({ files: [arquivo], title: `Festa do ${NOME}` }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blobFoto); a.download = nome;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+$('btnIniciar').onclick = () => { if (iniciado){ mostrar('camera'); ajustarPalco(); } else iniciarFiltro(); };
+$('disparo').onclick = tirarFoto;
+$('btnFiltro').onclick = () => {
+  filtroLigado = !filtroLigado;
+  $('btnFiltro').style.opacity = filtroLigado ? 1 : .45;
+};
+$('btnSalvar').onclick = salvarFoto;
+$('btnDeNovo').onclick = () => { mostrar('camera'); ajustarPalco(); };
+</script>
+</body>
+</html>
